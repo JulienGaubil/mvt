@@ -1,0 +1,4 @@
+_target_: mvt.datasets.habitat_builder
+ROOT: data/habitat
+resolution: 224
+num_views: 2 # 2 to 5

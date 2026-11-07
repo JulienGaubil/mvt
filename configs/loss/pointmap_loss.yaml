@@ -1,0 +1,3 @@
+_target_: mvt.losses.PointmapLoss
+
+alpha: 0.2

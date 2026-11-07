@@ -1,0 +1,16 @@
+_target_: mvt.MVT
+
+embed_dim: 1024
+num_mvt_blocks: 12
+num_heads: 16
+num_register_tokens: 4
+
+encoder_init: "crocov2" # crocov2 or dinov2
+crocov2_checkpoint: "pretrained_models/CroCo_V2_ViTLarge_BaseDecoder.pth"
+cva_param: "cross_attn" # cross_attn or global_attn
+view_weight_sharing: True
+output_param: "pointmap" # pointmap, factorised (depth + pose) or mixed
+num_views: 2
+freeze_encoder: True
+head_type: linear # linear or dense
+use_ffn_layers: True # False for the MLP-free variants

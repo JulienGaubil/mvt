@@ -1,0 +1,6 @@
+_target_: mvt.losses.VGGTLoss
+
+depth_weight: 1.0
+camera_weight: 1.0
+pointmap_weight: 1.0
+pointmap_loss: vggt # vggt or dust3r

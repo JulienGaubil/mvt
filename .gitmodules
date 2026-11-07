@@ -1,0 +1,6 @@
+[submodule "thirdp/dust3r"]
+	path = thirdp/dust3r
+	url = https://github.com/naver/dust3r
+[submodule "thirdp/vggt"]
+	path = thirdp/vggt
+	url = https://github.com/facebookresearch/vggt

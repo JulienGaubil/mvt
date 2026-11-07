@@ -1,0 +1,4 @@
+_target_: mvt.datasets.blendedmvs_builder
+ROOT: data/blendedMVS
+resolution: 224
+num_views: 2

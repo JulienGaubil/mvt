@@ -1,0 +1,30 @@
+defaults:
+  - model: mvt
+  - dataset: habitat
+  - loss: pointmap_loss
+  - _self_
+
+optimizer:
+  lr: 1e-4
+  weight_decay: 0.01
+  n_epochs: 10
+  warmup_epochs: 0.5 # linear warmup, then cosine decay to lr / 100
+  grad_clip_norm: 1.0
+system:
+  random_seed: 1602 # an int, or a list of ints for one run per seed
+  num_gpus: 1
+  num_workers: 8
+precision:
+  bf16: false
+wandb:
+  entity: null # set to your wandb user or team name
+  project: mvt
+  mode: online # online, offline or disabled; null skips wandb entirely
+  notes: ""
+val:
+  enable: true
+  every_n_epochs: 1
+  n_val_per_epoch: 0 # extra validation runs within each epoch
+note: "" # suffix appended to the experiment name
+batch_size: 16 # per GPU
+output_dir: null # defaults to mvt_exps/ in the repository root
