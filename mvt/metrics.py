@@ -91,8 +91,7 @@ def pointmap_multiview_errors(
         reference_mask = reference_mask & reference["valid_mask"]
         other_mask = other_mask & other["valid_mask"]
 
-        # The target of each view is the other prediction warped to its pixel
-        # grid. Predictions are in the view 0 frame, hence identity poses.
+        # Target: the other prediction warped to this view (view 0 frame, so identity).
         reference_pts = preds[0]["pts3d"]
         other_pts = preds[view_idx]["pts3d"]
         identity = torch.eye(

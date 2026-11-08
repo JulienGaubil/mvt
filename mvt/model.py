@@ -19,11 +19,18 @@ from typing import Any, Dict, Tuple, Literal, Callable, Sequence
 from mvt import _thirdp  # noqa: F401
 from mvt.datasets import dust3r_inv, imagenet_norm
 from mvt.heads import DepthHead, PointmapHead, PoseHead
-from models.croco import CroCoNet
+from mvt.utils import tf32_matmul
 from vggt.layers.layer_scale import LayerScale
 from vggt.layers.mlp import Mlp
 from vggt.layers.rope import RotaryPositionEmbedding2D, PositionGetter
 from vggt.models.aggregator import slice_expand_and_flatten
+
+# CroCo enables TF32 matmuls globally at import: restore the setting, the
+# forward pass enables them locally.
+_ALLOW_TF32 = torch.backends.cuda.matmul.allow_tf32
+from models.croco import CroCoNet
+
+torch.backends.cuda.matmul.allow_tf32 = _ALLOW_TF32
 
 # Pretrained CroCoV2 weights, downloaded from https://github.com/naver/croco.
 CROCOV2_CHECKPOINT = "pretrained_models/CroCo_V2_ViTLarge_BaseDecoder.pth"
@@ -336,8 +343,7 @@ class ViewAttentionBlock(nn.Module):
                 else nn.Identity()
             )
         else:
-            # Keep the MLP attributes, for code that walks the blocks, without
-            # storing unused MLP parameters in MLP-free models and checkpoints.
+            # Keep the MLP attributes for block walkers, without unused MLP parameters.
             self.norm2 = nn.Identity()
             self.mlp = nn.Identity()
             self.ls2 = nn.Identity()
@@ -485,8 +491,7 @@ class MVT(nn.Module):
             )
         self.mvt_blocks = nn.ModuleList(mvt_blocks)
 
-        # Initialize special tokens. Register tokens act as reference view encoding:
-        # always distinct ref/non-ref even when sharing params across views.
+        # Register tokens tell ref/non-ref views apart, even with shared weights.
         self.num_register_tokens = num_register_tokens
         self.num_camera_tokens = 1 if self.predict_pose else 0
         if self.num_register_tokens == 0 and self.num_camera_tokens == 0:
@@ -672,6 +677,7 @@ class MVT(nn.Module):
         model.eval()
         return model
 
+    @tf32_matmul()
     def forward(
         self,
         *view_images: Float[torch.Tensor, "batch rgb=3 height width"],
@@ -792,7 +798,7 @@ class MVT(nn.Module):
                 else self.pointmap_head
             )
 
-            # List of per-view pointmaps in the first view coordinate system and confidence maps.
+            # Per-view pointmaps in the first-view frame, with confidence maps.
             output["pointmaps"] = [
                 pointmap_head(tokens)
                 for tokens, pointmap_head in zip(view_patch_tokens, pointmap_heads)
@@ -814,10 +820,8 @@ class MVT(nn.Module):
                 V * [self.pose_head] if self.view_weight_sharing else self.pose_head
             )
 
-            # List of per-view pose 9D encodings.
-            # 3 channels for translation, then 4 channels for quaternions, then 2 channels for vertical/horizontal fov.
-            # Represents an OpenCV world-to-camera transform with the first view as the world frame.
-            # Assumes centered principal point.
+            # Per-view 9D poses: translation (3), quaternion (4), vertical/horiz. FoV (2)
+            # OpenCV world-to-camera, first view as world, centered principal point.
             output["poses"] = [
                 pose_head(tokens)
                 for tokens, pose_head in zip(camera_patch_tokens, pose_heads)

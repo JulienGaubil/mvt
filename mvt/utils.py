@@ -8,11 +8,23 @@ import numpy as np
 
 from pathlib import Path
 from jaxtyping import Bool, Float
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, Iterator, List, Sequence
+from contextlib import contextmanager
 from torch.distributed import init_process_group
 
 from mvt import _thirdp  # noqa: F401
 from dust3r.inference import make_batch_symmetric
+
+@contextmanager
+def tf32_matmul(enabled: bool = True) -> Iterator[None]:
+    """Set TF32 matmuls (as used by DUSt3R and CroCo) within a block or function."""
+    previous = torch.backends.cuda.matmul.allow_tf32
+    torch.backends.cuda.matmul.allow_tf32 = enabled
+    try:
+        yield
+    finally:
+        torch.backends.cuda.matmul.allow_tf32 = previous
+
 
 # Non-tensor (or CPU-only) view fields that are not moved to the device.
 HOST_KEYS = {"depthmap", "dataset", "label", "instance", "idx", "true_shape", "rng"}

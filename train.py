@@ -38,6 +38,7 @@ from mvt.utils import (
     resolve_experiment_path,
     sanitize_exp_name,
     set_global_seed,
+    tf32_matmul,
 )
 
 
@@ -316,11 +317,12 @@ def train(
             views = prepare_batch(batch, rank, make_symmetric=True)
             images = [view["img"] for view in views]
 
-            with autocast_context(rank_device(rank), use_bf16):
-                preds = model(*images)
-                loss, loss_details = unpack_loss_output(loss_fn(views, preds))
-
-            loss.backward()
+            # Forward and backward passes, with TF32 matmuls like the CroCo encoder.
+            with tf32_matmul():
+                with autocast_context(rank_device(rank), use_bf16):
+                    preds = model(*images)
+                    loss, loss_details = unpack_loss_output(loss_fn(views, preds))
+                loss.backward()
             if grad_clip_norm is not None:
                 torch.nn.utils.clip_grad_norm_(
                     [param for param in model.parameters() if param.requires_grad],
